@@ -1,8 +1,8 @@
 package handler
 
 import (
-	"person-api/internal/model"
-	"person-api/internal/service"
+	"person-api/model"
+	"person-api/service"
 
 	"developer.zopsmart.com/go/gofr/pkg/errors"
 	"developer.zopsmart.com/go/gofr/pkg/gofr"

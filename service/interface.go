@@ -1,9 +1,7 @@
 package service
 
-//go:generate mockgen -destination=interface_mock.go -package=store person-api/internal/service Person
-
 import (
-	"person-api/internal/model"
+	"person-api/model"
 
 	"developer.zopsmart.com/go/gofr/pkg/gofr"
 )

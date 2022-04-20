@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"net/http"
 	"net/http/httptest"
-	"person-api/internal/model"
+	"person-api/model"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
-	"person-api/internal/service"
+	"person-api/service"
 
 	"developer.zopsmart.com/go/gofr/pkg/errors"
 	"developer.zopsmart.com/go/gofr/pkg/gofr"

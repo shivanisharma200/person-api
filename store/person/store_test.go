@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
-	"person-api/internal/model"
+	"person-api/model"
 	"testing"
 
 	"github.com/stretchr/testify/assert"

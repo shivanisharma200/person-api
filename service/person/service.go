@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"person-api/internal/model"
-	"person-api/internal/store"
+	"person-api/model"
+	"person-api/store"
 
 	"developer.zopsmart.com/go/gofr/pkg/errors"
 	"developer.zopsmart.com/go/gofr/pkg/gofr"

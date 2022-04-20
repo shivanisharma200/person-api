@@ -2,12 +2,12 @@ package person
 
 import (
 	"net/http"
-	"person-api/internal/model"
+	"person-api/model"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
-	"person-api/internal/store"
+	"person-api/store"
 
 	"developer.zopsmart.com/go/gofr/pkg/errors"
 	"developer.zopsmart.com/go/gofr/pkg/gofr"

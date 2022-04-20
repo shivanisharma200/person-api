@@ -1,10 +1,8 @@
 package store
 
-//go:generate mockgen -destination=interface_mock.go -package=store person-api/internal/store Person
-
 import (
 	"developer.zopsmart.com/go/gofr/pkg/gofr"
-	"person-api/internal/model"
+	"person-api/model"
 )
 
 type Person interface {

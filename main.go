@@ -1,15 +1,16 @@
 package main
 
 import (
-	handlerPerson "person-api/internal/handler"
-	servicePerson "person-api/internal/service/person"
-	storePerson "person-api/internal/store/person"
+	handlerPerson "person-api/handler"
+	servicePerson "person-api/service/person"
+	storePerson "person-api/store/person"
 
 	"developer.zopsmart.com/go/gofr/pkg/gofr"
 )
 
 func main() {
 	g := gofr.New()
+	// g.Server.ValidateHeaders = false //?
 
 	store := storePerson.New()
 	service := servicePerson.New(store)

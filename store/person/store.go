@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"person-api/internal/model"
+	"person-api/model"
 
 	"developer.zopsmart.com/go/gofr/pkg/errors"
 	"developer.zopsmart.com/go/gofr/pkg/gofr"
