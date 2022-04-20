@@ -1,23 +1,23 @@
 package handler
 
 import (
+	"fmt"
 	"person-api/internal/model"
 	"person-api/internal/service"
 
 	"developer.zopsmart.com/go/gofr/pkg/errors"
 	"developer.zopsmart.com/go/gofr/pkg/gofr"
-	"developer.zopsmart.com/go/gofr/pkg/gofr/types"
 )
 
-type API struct {
-	PersonService service.Person 
+type personHandler struct {
+	PersonService service.Person
 }
 
-func New(personService service.Person) *API {
-	return &API{PersonService: personService}
+func New(personService service.Person) *personHandler {
+	return &personHandler{PersonService: personService}
 }
 
-func (p *API) GetByID(ctx *gofr.Context) (interface{}, error) {
+func (p *personHandler) GetByID(ctx *gofr.Context) (interface{}, error) {
 	id := ctx.PathParam("id")
 
 	person, err := p.PersonService.GetByID(ctx, id)
@@ -25,24 +25,24 @@ func (p *API) GetByID(ctx *gofr.Context) (interface{}, error) {
 		return nil, err
 	}
 
-	return types.Response{
-		Data: person,
-	}, nil
+	return person, nil
 }
 
-func (p *API) Get(ctx *gofr.Context) (interface{}, error) {
+func (p *personHandler) Get(ctx *gofr.Context) (interface{}, error) {
+
+	fmt.Println("Inside get of handler")
 	persons, err := p.PersonService.Get(ctx)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return types.Response{
-		Data: persons,
-	}, nil
+	fmt.Println("no error in get of handler")
+
+	return persons, nil
 }
 
-func (p *API) Create(ctx *gofr.Context) (interface{}, error) {
+func (p *personHandler) Create(ctx *gofr.Context) (interface{}, error) {
 	var person model.Person
 
 	err := ctx.Bind(&person)
@@ -57,12 +57,10 @@ func (p *API) Create(ctx *gofr.Context) (interface{}, error) {
 		return nil, err
 	}
 
-	return types.Response{
-		Data: personCreated,
-	}, nil
+	return personCreated, nil
 }
 
-func (p *API) Update(ctx *gofr.Context) (interface{}, error) {
+func (p *personHandler) Update(ctx *gofr.Context) (interface{}, error) {
 	idString := ctx.PathParam("id")
 
 	var patient *model.Person
@@ -79,12 +77,10 @@ func (p *API) Update(ctx *gofr.Context) (interface{}, error) {
 		return nil, err
 	}
 
-	return types.Response{
-		Data: person,
-	}, nil
+	return person, nil
 }
 
-func (p *API) Delete(ctx *gofr.Context) (interface{}, error) {
+func (p *personHandler) Delete(ctx *gofr.Context) (interface{}, error) {
 	idString := ctx.PathParam("id")
 	err := p.PersonService.Delete(ctx, idString)
 

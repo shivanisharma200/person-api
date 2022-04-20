@@ -5,8 +5,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"person-api/internal/model"
-	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 
 	"person-api/internal/service"
 
@@ -24,24 +25,33 @@ var person = model.Person{
 	Address: "Bangalore",
 }
 
+func httpReq(httpMethod, pathUrl string, body []byte) *gofr.Context {
+	req := httptest.NewRequest(httpMethod, "http://localhost:9000/"+pathUrl, bytes.NewReader(body))
+	ctx := gofr.NewContext(responder.NewContextualResponder(httptest.NewRecorder(), req), request.NewHTTPRequest(req), nil)
+	return ctx
+}
 func Test_GetByID(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
 	mockPerson := service.NewMockPerson(mockCtrl)
 	testCases := []struct {
+		desc          string
 		id            int
+		out           interface{}
 		mockCall      *gomock.Call
 		expectedError error
 	}{
-		// Success
 		{
+			desc:          "success test case",
+			out:           &person,
 			id:            1,
 			mockCall:      mockPerson.EXPECT().GetByID(gomock.Any(), gomock.Any()).Return(&person, nil),
 			expectedError: nil,
 		},
-		// Failure
 		{
+			desc:          "failure test case",
+			out:           nil,
 			id:            -1,
 			mockCall:      mockPerson.EXPECT().GetByID(gomock.Any(), gomock.Any()).Return(nil, errors.InvalidParam{Param: []string{"id"}}),
 			expectedError: errors.InvalidParam{Param: []string{"id"}},
@@ -49,15 +59,12 @@ func Test_GetByID(t *testing.T) {
 	}
 	p := New(mockPerson)
 
-	for _, testCase := range testCases {
-		req := httptest.NewRequest(http.MethodGet, "http://localhost:9000/persons/{id}", nil)
-		ctx := gofr.NewContext(responder.NewContextualResponder(httptest.NewRecorder(), req), request.NewHTTPRequest(req), nil)
+	for i, testCase := range testCases {
+		ctx := httpReq(http.MethodGet, "persons/{id}", nil)
+		out, err := p.GetByID(ctx)
 
-		_, err := p.GetByID(ctx)
-
-		if !reflect.DeepEqual(testCase.expectedError, err) {
-			t.Errorf("Expected error: %v Got %v", testCase.expectedError, err)
-		}
+		assert.Equal(t, testCase.expectedError, err, "TEST[%d], failed.\n%s", i, testCase.desc)
+		assert.Equal(t, testCase.out, out, "TEST[%d], failed.\n%s", i, testCase.desc)
 	}
 }
 
@@ -66,16 +73,20 @@ func Test_Get(t *testing.T) {
 	defer mockCtrl.Finish()
 	mockPerson := service.NewMockPerson(mockCtrl)
 	testCases := []struct {
+		desc          string
+		out           interface{}
 		mockCall      *gomock.Call
 		expectedError error
 	}{
-		// Success
 		{
+			desc:          "success test case",
+			out:           []*model.Person{&person},
 			mockCall:      mockPerson.EXPECT().Get(gomock.Any()).Return([]*model.Person{&person}, nil),
 			expectedError: nil,
 		},
-		// Failure
 		{
+			desc:          "failure test case",
+			out:           nil,
 			mockCall:      mockPerson.EXPECT().Get(gomock.Any()).Return(nil, errors.EntityNotFound{Entity: "Person"}),
 			expectedError: errors.EntityNotFound{Entity: "Person"},
 		},
@@ -83,15 +94,12 @@ func Test_Get(t *testing.T) {
 
 	p := New(mockPerson)
 
-	for _, testCase := range testCases {
-		req := httptest.NewRequest(http.MethodPost, "http://localhost:9000/persons", nil)
-		ctx := gofr.NewContext(responder.NewContextualResponder(httptest.NewRecorder(), req), request.NewHTTPRequest(req), nil)
+	for i, testCase := range testCases {
+		ctx := httpReq(http.MethodGet, "persons", nil)
+		out, err := p.Get(ctx)
 
-		_, err := p.Get(ctx)
-
-		if !reflect.DeepEqual(testCase.expectedError, err) {
-			t.Errorf("Expected error: %v Got %v", testCase.expectedError, err)
-		}
+		assert.Equal(t, testCase.expectedError, err, "TEST[%d], failed.\n%s", i, testCase.desc)
+		assert.Equal(t, testCase.out, out, "TEST[%d], failed.\n%s", i, testCase.desc)
 	}
 }
 
@@ -101,112 +109,101 @@ func Test_Create(t *testing.T) {
 
 	mockPerson := service.NewMockPerson(mockCtrl)
 	testCases := []struct {
+		desc          string
 		body          []byte
 		input         model.Person
+		out           interface{}
 		mockCall      *gomock.Call
 		expectedError error
 	}{
-		// Success
 		{
+			desc: "success test case",
 			body: []byte(`{
 				"name": "Abc",
-				"age": "34",
+				"age": 34,
 				"address": "Bangalore"
 				}`),
 			input:         person,
+			out:           &person,
 			mockCall:      mockPerson.EXPECT().Create(gomock.Any(), gomock.Any()).Return(&person, nil),
 			expectedError: nil,
 		},
-		// Failure
 		{
+			desc: "failure test case",
 			body: []byte(`{
 				"name": "Abc",
 				"age": "young"
 				"address": "Bangalore"
 				}`),
-			input: person,
-			mockCall: mockPerson.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil, &errors.Response{
-				StatusCode: http.StatusBadRequest,
-				Code:       http.StatusText(http.StatusBadRequest),
-				Reason:     "Invalid fields provided",
-			}),
-			expectedError: &errors.Response{
-				StatusCode: http.StatusBadRequest,
-				Code:       http.StatusText(http.StatusBadRequest),
-				Reason:     "Invalid fields provided",
-			},
-		},
-	}
-
-	p := New(mockPerson)
-
-	for _, testCase := range testCases {
-		req := httptest.NewRequest(http.MethodPost, "http://localhost:9000/persons", bytes.NewReader(testCase.body))
-		ctx := gofr.NewContext(responder.NewContextualResponder(httptest.NewRecorder(), req), request.NewHTTPRequest(req), nil)
-
-		_, err := p.Create(ctx)
-
-		if !reflect.DeepEqual(testCase.expectedError, err) {
-			t.Errorf("Expected error: %v Got %v", testCase.expectedError, err)
-		}
-	}
-}
-
-func Test_Update(t *testing.T) {
-	var pat = model.Person{
-		Name:    "Abc",
-		Address: "Pune",
-	}
-
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	mockPerson := service.NewMockPerson(mockCtrl)
-	testCases := []struct {
-		body          []byte
-		mockCall      *gomock.Call
-		expectedError error
-	}{
-		// Success
-		{
-			body: []byte(`{
-				"name": "Abc",
-				"address": "Pune"
-				}`),
-			mockCall:      mockPerson.EXPECT().Update(gomock.Any(), gomock.Any(), gomock.Any()).Return(&pat, nil),
-			expectedError: nil,
-		},
-		// Failure
-		{
-			body: []byte(`{
-				"name": "Abc",
-				"address": "Pune"
-				}`),
-			mockCall: mockPerson.EXPECT().Update(gomock.Any(), gomock.Any(), gomock.Any()).
-				Return(nil, errors.EntityNotFound{Entity: "Person", ID: "id"}),
-			expectedError: errors.EntityNotFound{Entity: "Person", ID: "id"},
-		},
-		// Failure
-		{
-			body: []byte(`{
-				"name": 1,
-				"description": "person description"
-				}`),
+			input:         person,
+			out:           nil,
 			expectedError: errors.InvalidParam{},
 		},
 	}
 
 	p := New(mockPerson)
 
-	for _, testCase := range testCases {
-		req := httptest.NewRequest(http.MethodPost, "http://localhost:9000/persons/{id}", bytes.NewReader(testCase.body))
-		ctx := gofr.NewContext(responder.NewContextualResponder(httptest.NewRecorder(), req), request.NewHTTPRequest(req), nil)
+	for i, testCase := range testCases {
+		ctx := httpReq(http.MethodPost, "persons", testCase.body)
+		out, err := p.Create(ctx)
 
-		_, err := p.Update(ctx)
+		assert.Equal(t, testCase.expectedError, err, "TEST[%d], failed.\n%s", i, testCase.desc)
+		assert.Equal(t, testCase.out, out, "TEST[%d], failed.\n%s", i, testCase.desc)
+	}
+}
 
-		if !reflect.DeepEqual(testCase.expectedError, err) {
-			t.Errorf("Expected error: %v Got %v", testCase.expectedError, err)
-		}
+func Test_Update(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockPerson := service.NewMockPerson(mockCtrl)
+	testCases := []struct {
+		desc          string
+		body          []byte
+		out           interface{}
+		mockCall      *gomock.Call
+		expectedError error
+	}{
+		{
+			desc: "success test case",
+			body: []byte(`{
+				"name": "Abc",
+				"address": "Pune"
+				}`),
+			out:           &person,
+			mockCall:      mockPerson.EXPECT().Update(gomock.Any(), gomock.Any(), gomock.Any()).Return(&person, nil),
+			expectedError: nil,
+		},
+		{
+			desc: "failure test case",
+			body: []byte(`{
+				"name": "Abc",
+				"address": "Pune"
+				}`),
+			out: nil,
+			mockCall: mockPerson.EXPECT().Update(gomock.Any(), gomock.Any(), gomock.Any()).
+				Return(nil, errors.EntityNotFound{Entity: "Person", ID: "id"}),
+			expectedError: errors.EntityNotFound{Entity: "Person", ID: "id"},
+		},
+		{
+			desc: "Invalid Name Provided",
+			body: []byte(`{
+				"name": 1,
+				"description": "person description"
+				}`),
+			out:           nil,
+			expectedError: errors.InvalidParam{},
+		},
+	}
+
+	p := New(mockPerson)
+
+	for i, testCase := range testCases {
+		ctx := httpReq(http.MethodPut, "persons/{id}", testCase.body)
+		out, err := p.Update(ctx)
+
+		assert.Equal(t, testCase.expectedError, err, "TEST[%d], failed.\n%s", i, testCase.desc)
+		assert.Equal(t, testCase.out, out, "TEST[%d], failed.\n%s", i, testCase.desc)
 	}
 }
 
@@ -216,16 +213,17 @@ func Test_Delete(t *testing.T) {
 
 	mockPerson := service.NewMockPerson(mockCtrl)
 	testCases := []struct {
+		desc          string
 		mockCall      *gomock.Call
 		expectedError error
 	}{
-		// Success
 		{
+			desc:          "success test case",
 			mockCall:      mockPerson.EXPECT().Delete(gomock.Any(), gomock.Any()).Return(nil),
 			expectedError: nil,
 		},
-		// Failure
 		{
+			desc: "failure test case",
 			mockCall: mockPerson.EXPECT().
 				Delete(gomock.Any(), gomock.Any()).Return(errors.Error("unexpected error occuered in deleting row")),
 			expectedError: errors.Error("unexpected error occuered in deleting row"),
@@ -234,14 +232,10 @@ func Test_Delete(t *testing.T) {
 
 	p := New(mockPerson)
 
-	for _, testCase := range testCases {
-		req := httptest.NewRequest(http.MethodPost, "http://localhost:9000/persons/{id}", nil)
-		ctx := gofr.NewContext(responder.NewContextualResponder(httptest.NewRecorder(), req), request.NewHTTPRequest(req), nil)
-
+	for i, testCase := range testCases {
+		ctx := httpReq(http.MethodDelete, "persons/{id}", nil)
 		_, err := p.Delete(ctx)
 
-		if !reflect.DeepEqual(testCase.expectedError, err) {
-			t.Errorf("Expected error: %v Got %v", testCase.expectedError, err)
-		}
+		assert.Equal(t, testCase.expectedError, err, "TEST[%d], failed.\n%s", i, testCase.desc)
 	}
 }

@@ -2,6 +2,7 @@ package person
 
 import (
 	"database/sql"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -20,13 +21,13 @@ func New() Person {
 
 func updateFunc(person *model.Person) (query string, values []interface{}) {
 	if person.Name != "" {
-		query += "name=?,"
+		query += "name=$1,"
 
 		values = append(values, person.Name)
 	}
 
 	if person.Address != "" {
-		query += "address=?,"
+		query += "address=$2,"
 
 		values = append(values, person.Address)
 	}
@@ -39,7 +40,7 @@ func updateFunc(person *model.Person) (query string, values []interface{}) {
 }
 
 func (p Person) GetByID(ctx *gofr.Context, id int) (*model.Person, error) {
-	const q = "SELECT id, name, age, address FROM person WHERE id=$"
+	const q = "SELECT id, name, age, address FROM person WHERE id=$1"
 
 	person := model.Person{}
 
@@ -65,6 +66,7 @@ func (p Person) Get(ctx *gofr.Context) ([]*model.Person, error) {
 	rows, err := ctx.DB().QueryContext(ctx, q)
 
 	if err == sql.ErrNoRows {
+		fmt.Println(err)
 		return nil, errors.EntityNotFound{Entity: "Person"}
 	}
 
@@ -76,35 +78,35 @@ func (p Person) Get(ctx *gofr.Context) ([]*model.Person, error) {
 		}
 	}
 
-	var persons [] *model.Person
+	var persons []*model.Person
 
 	defer rows.Close()
 
 	for rows.Next() {
 		var person model.Person
 		_ = rows.Scan(&person.ID, &person.Name, &person.Age, &person.Address)
-
 		persons = append(persons, &person)
 	}
 
+	fmt.Println("No error in scanning, values:", persons)
 	return persons, nil
 }
 
 func (p Person) Create(ctx *gofr.Context, person *model.Person) (*model.Person, error) {
-	resp, err := ctx.DB().ExecContext(ctx, "INSERT INTO person(name, age, address) VALUES($, $, $)",
-		person.Name, person.Age, person.Address)
+	var lastInsertedID int
+	fmt.Println("Inside create of store")
+	err := ctx.DB().QueryRowContext(ctx, "INSERT INTO person(name, age, address) VALUES($1, $2, $3) RETURNING id", person.Name, person.Age, person.Address).Scan(
+		&lastInsertedID)
 
 	if err != nil {
+		fmt.Println(err)
 		return nil, &errors.Response{
 			StatusCode: http.StatusInternalServerError,
 			Code:       http.StatusText(http.StatusInternalServerError),
 			Reason:     "cannot create new person",
 		}
 	}
-
-	lastInserted, _ := resp.LastInsertId()
-
-	return p.GetByID(ctx, int(lastInserted))
+	return p.GetByID(ctx, lastInsertedID)
 }
 
 func (p Person) Update(ctx *gofr.Context, id int, person *model.Person) (*model.Person, error) {
@@ -112,7 +114,7 @@ func (p Person) Update(ctx *gofr.Context, id int, person *model.Person) (*model.
 
 	resQuery, values := updateFunc(person)
 	query += resQuery
-	query += " WHERE id=$"
+	query += " WHERE id=$3"
 
 	values = append(values, id)
 
@@ -130,7 +132,7 @@ func (p Person) Update(ctx *gofr.Context, id int, person *model.Person) (*model.
 }
 
 func (p Person) Delete(ctx *gofr.Context, id int) (err error) {
-	_, err = ctx.DB().ExecContext(ctx, "DELETE FROM person WHERE id=$", id)
+	_, err = ctx.DB().ExecContext(ctx, "DELETE FROM person WHERE id=$1", id)
 
 	if err != nil {
 		return &errors.Response{
