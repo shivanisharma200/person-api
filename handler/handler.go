@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"person-api/internal/model"
 	"person-api/internal/service"
 
@@ -30,14 +29,12 @@ func (p *personHandler) GetByID(ctx *gofr.Context) (interface{}, error) {
 
 func (p *personHandler) Get(ctx *gofr.Context) (interface{}, error) {
 
-	fmt.Println("Inside get of handler")
 	persons, err := p.PersonService.Get(ctx)
 
 	if err != nil {
 		return nil, err
 	}
 
-	fmt.Println("no error in get of handler")
 
 	return persons, nil
 }

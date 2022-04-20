@@ -1,7 +1,6 @@
 package person
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -30,7 +29,6 @@ func (p *Person) GetByID(ctx *gofr.Context, idString string) (*model.Person, err
 }
 
 func (p *Person) Get(ctx *gofr.Context) ([]*model.Person, error) {
-	fmt.Println("Inside get of service")
 	return p.PersonStoreHandler.Get(ctx)
 }
 

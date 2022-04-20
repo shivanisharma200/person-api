@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	handlerPerson "person-api/internal/handler"
 	servicePerson "person-api/internal/service/person"
 	storePerson "person-api/internal/store/person"
@@ -11,13 +10,11 @@ import (
 
 func main() {
 	g := gofr.New()
-	// g.Server.ValidateHeaders = false //?
 
 	store := storePerson.New()
 	service := servicePerson.New(store)
 	personHandler := handlerPerson.New(service)
 
-	fmt.Println("Inside Main Hitting end points")
 	g.GET("/persons/{id}", personHandler.GetByID)
 	g.GET("/persons", personHandler.Get)
 	g.POST("/persons", personHandler.Create)

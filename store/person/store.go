@@ -2,7 +2,6 @@ package person
 
 import (
 	"database/sql"
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -66,7 +65,6 @@ func (p Person) Get(ctx *gofr.Context) ([]*model.Person, error) {
 	rows, err := ctx.DB().QueryContext(ctx, q)
 
 	if err == sql.ErrNoRows {
-		fmt.Println(err)
 		return nil, errors.EntityNotFound{Entity: "Person"}
 	}
 
@@ -88,18 +86,15 @@ func (p Person) Get(ctx *gofr.Context) ([]*model.Person, error) {
 		persons = append(persons, &person)
 	}
 
-	fmt.Println("No error in scanning, values:", persons)
 	return persons, nil
 }
 
 func (p Person) Create(ctx *gofr.Context, person *model.Person) (*model.Person, error) {
 	var lastInsertedID int
-	fmt.Println("Inside create of store")
 	err := ctx.DB().QueryRowContext(ctx, "INSERT INTO person(name, age, address) VALUES($1, $2, $3) RETURNING id", person.Name, person.Age, person.Address).Scan(
 		&lastInsertedID)
 
 	if err != nil {
-		fmt.Println(err)
 		return nil, &errors.Response{
 			StatusCode: http.StatusInternalServerError,
 			Code:       http.StatusText(http.StatusInternalServerError),
