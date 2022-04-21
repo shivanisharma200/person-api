@@ -182,7 +182,15 @@ func Test_Update(t *testing.T) {
 			expectedError: nil,
 		},
 		{
-			desc:          "failure test case",
+			desc: "failure test case",
+			id:   "1",
+			mockCall: []*gomock.Call{
+				mockPerson.EXPECT().GetByID(ctx, 1).Return(nil, errors.EntityNotFound{Entity: "Person", ID: "1"}),
+			},
+			expectedError: errors.EntityNotFound{Entity: "Person", ID: "1"},
+		},
+		{
+			desc:          "invalid id",
 			id:            "-1",
 			out:           nil,
 			expectedError: errors.InvalidParam{Param: []string{"id"}},
@@ -221,7 +229,15 @@ func Test_Delete(t *testing.T) {
 			expectedError: nil,
 		},
 		{
-			desc:          "failure test case",
+			desc: "failure test case",
+			id:   "1",
+			mockCall: []*gomock.Call{
+				mockPerson.EXPECT().GetByID(ctx, 1).Return(nil, errors.EntityNotFound{Entity: "Person", ID: "1"}),
+			},
+			expectedError: errors.EntityNotFound{Entity: "Person", ID: "1"},
+		},
+		{
+			desc:          "invalid id",
 			id:            "-1",
 			expectedError: errors.InvalidParam{Param: []string{"id"}},
 		},

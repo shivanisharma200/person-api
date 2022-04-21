@@ -6,6 +6,7 @@ import (
 
 	"developer.zopsmart.com/go/gofr/pkg/errors"
 	"developer.zopsmart.com/go/gofr/pkg/gofr"
+	"developer.zopsmart.com/go/gofr/pkg/gofr/types"
 )
 
 type personHandler struct {
@@ -85,5 +86,7 @@ func (p *personHandler) Delete(ctx *gofr.Context) (interface{}, error) {
 		return nil, err
 	}
 
-	return "", nil
+	return types.Response{
+		Data: "Successfully Deleted Row",
+	}, nil
 }

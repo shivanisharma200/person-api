@@ -101,6 +101,7 @@ func (p Person) Create(ctx *gofr.Context, person *model.Person) (*model.Person, 
 			Reason:     "cannot create new person",
 		}
 	}
+
 	return p.GetByID(ctx, lastInsertedID)
 }
 

@@ -132,6 +132,18 @@ func Test_Create(t *testing.T) {
 			desc: "failure test case",
 			body: []byte(`{
 				"name": "Abc",
+				"age": 34,
+				"address": "Bangalore"
+				}`),
+			input:         person,
+			out:           nil,
+			mockCall:      mockPerson.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil, errors.Error("error")),
+			expectedError: errors.Error("error"),
+		},
+		{
+			desc: "invalid age",
+			body: []byte(`{
+				"name": "Abc",
 				"age": "young"
 				"address": "Bangalore"
 				}`),

@@ -54,11 +54,27 @@ func Test_GetByID(t *testing.T) {
 		},
 
 		{
-			desc:          "failure test case",
+			desc:          "no rows returned",
 			id:            1,
 			out:           nil,
 			mockQuery:     mock.ExpectQuery(q).WithArgs(1).WillReturnError(sql.ErrNoRows),
 			expectedError: errors.EntityNotFound{Entity: "Person", ID: "1"},
+		},
+
+		{
+			desc: "failure test case ",
+			id:   -1,
+			out:  nil,
+			mockQuery: mock.ExpectQuery(q).WithArgs(-1).WillReturnError(&errors.Response{
+				StatusCode: http.StatusInternalServerError,
+				Code:       http.StatusText(http.StatusInternalServerError),
+				Reason:     "cannnot fetch row",
+			}),
+			expectedError: &errors.Response{
+				StatusCode: http.StatusInternalServerError,
+				Code:       http.StatusText(http.StatusInternalServerError),
+				Reason:     "cannnot fetch row",
+			},
 		},
 	}
 
@@ -140,7 +156,8 @@ func Test_Get(t *testing.T) {
 func Test_Create(t *testing.T) {
 	db, mock, store, ctx := NewMock()
 
-	const q = "INSERT INTO person(name, age, address) VALUES($1, $2, $3) RETURNING id"
+	const q1 = "INSERT INTO person(name, age, address) VALUES($1, $2, $3) RETURNING id"
+	const q2 = "SELECT id, name, age, address FROM person WHERE id=$1"
 	defer db.Close()
 
 	testCases := []struct {
@@ -154,11 +171,10 @@ func Test_Create(t *testing.T) {
 		// 	desc:   "success test case",
 		// 	input:  &model.Person{ID: "1", Name: "Abc", Age: 34, Address: "Bangalore"},
 		// 	out: person,
-		// 	mockQuery: []interface{}{mock.ExpectQuery(q).
-		// 		WithArgs("Abc", 34, "Bangalore").
-		// 		WillReturnRows(mock.NewRows([]string{"id"}).AddRow(1)).WillReturnError(nil),
+		// 	mockQuery: []interface{}{mock.ExpectQuery(q1).WithArgs("Abc", 34, "Bangalore").WillReturnRows(mock.NewRows([]string{"id"}).
+		// 	AddRow(1)).WillReturnError(nil),
 		// 		mock.
-		// 			ExpectQuery(q).
+		// 			ExpectQuery(q2).
 		// 			WithArgs(1).
 		// 			WillReturnRows(mock.NewRows([]string{"id", "name", "address", "age"}).
 		// 				AddRow(1, "Abc", 34, "Bangalore")).WillReturnError(nil),
@@ -169,17 +185,34 @@ func Test_Create(t *testing.T) {
 			desc:  "failure test case",
 			input: &model.Person{ID: "1", Name: "Abc", Age: 34, Address: "Bangalore"},
 			out:   nil,
-			mockQuery: []interface{}{mock.ExpectQuery(q).
+			mockQuery: []interface{}{mock.ExpectQuery(q1).
 				WithArgs("Abc", 34, "Bangalore").
 				WillReturnError(errors.Error("Failed to create person")),
 				mock.
-					ExpectQuery(q).
+					ExpectQuery(q2).
 					WithArgs(1).
 					WillReturnError(&errors.Response{
 						StatusCode: http.StatusInternalServerError,
 						Code:       http.StatusText(http.StatusInternalServerError),
 						Reason:     "cannot create new person",
 					}),
+			},
+			expectedError: &errors.Response{
+				StatusCode: http.StatusInternalServerError,
+				Code:       http.StatusText(http.StatusInternalServerError),
+				Reason:     "cannot create new person",
+			},
+		},
+		{
+			desc:  "failed to fetch person",
+			input: &model.Person{ID: "1", Name: "Abc", Age: 34, Address: "Bangalore"},
+			out:   nil,
+			mockQuery: []interface{}{
+				mock.ExpectQuery(q2).WithArgs(1).WillReturnError(&errors.Response{
+					StatusCode: http.StatusInternalServerError,
+					Code:       http.StatusText(http.StatusInternalServerError),
+					Reason:     "cannot create new person",
+				}),
 			},
 			expectedError: &errors.Response{
 				StatusCode: http.StatusInternalServerError,
@@ -203,7 +236,7 @@ func Test_Create(t *testing.T) {
 func Test_Update(t *testing.T) {
 	db, mock, store, ctx := NewMock()
 
-	q := "SELECT id, name, age, address FROM person"
+	q := "SELECT id, name, age, address FROM person WHERE id=$1"
 
 	defer db.Close()
 	testCases := []struct {
@@ -214,23 +247,23 @@ func Test_Update(t *testing.T) {
 		mockQuery     []interface{}
 		expectedError error
 	}{
-		// {
-		// 	desc:   "success test case",
-		// 	id:     1,
-		// 	input:  &model.Person{ID: "1", Name: "Abc", Age: 34, Address: "Bangalore"},
-		// 	out: person,
-		// 	mockQuery: []interface{}{
-		// 		mock.ExpectExec("UPDATE person SET name=$1,address=$2 WHERE id=$3").
-		// 			WithArgs("Abc", 34, "Bangalore").
-		// 			WillReturnResult(sqlmock.NewResult(1, 1)),
-		// 		mock.
-		// 			ExpectQuery(q).
-		// 			WithArgs(1).
-		// 			WillReturnRows(mock.NewRows([]string{"id", "name", "address", "age"}).
-		// 				AddRow(1, "Abc", 34, "Bangalore")),
-		// 	},
-		// 	expectedError: nil,
-		// },
+		{
+			desc:  "success test case",
+			id:    1,
+			input: &model.Person{ID: "1", Name: "Abc", Age: 34, Address: "Bangalore"},
+			out:   person,
+			mockQuery: []interface{}{
+				mock.ExpectExec("UPDATE person SET name=$1,address=$2 WHERE id=$3").
+					WithArgs("Abc", "Bangalore", 1).
+					WillReturnResult(sqlmock.NewResult(1, 1)),
+				mock.
+					ExpectQuery(q).
+					WithArgs(1).
+					WillReturnRows(mock.NewRows([]string{"id", "name", "address", "age"}).
+						AddRow(1, "Abc", 34, "Bangalore")),
+			},
+			expectedError: nil,
+		},
 		{
 			desc:  "failure test case",
 			id:    1,
@@ -238,7 +271,7 @@ func Test_Update(t *testing.T) {
 			out:   nil,
 			mockQuery: []interface{}{
 				mock.ExpectExec("UPDATE person SET name=$1,address=$2 WHERE id=$3").
-					WithArgs("Abc", 34, "Bangalore").
+					WithArgs("Abc", "Bangalore", 1).
 					WillReturnError(&errors.Response{
 						StatusCode: http.StatusInternalServerError,
 						Code:       http.StatusText(http.StatusInternalServerError),
